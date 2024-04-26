@@ -1,0 +1,230 @@
+DELETE THIS NOTEPAD BEFORE SUBMISSION!!!
+
+notebook index:
+1. Tradition machine learning
+sentiment_analysis_1_decision_tree - simple decision tree classifier
+sentiment_analysis_2_random_forrest - random forrest classifier
+sentiment_analysis_3_logistic_regression - logistic regression classifier
+
+2. Deep learning
+sentiment_analysis_4_simple_feed_forward_3 - simple small deep neural network model
+sentiment_analysis_5_feed_forward_3 - slightly larger deep neural network architecture
+sentiment_analysis_6_feed_forward_5 - again, a larger deep neural network architecture
+sentiment_analysis_7_LSTM - A type of recurrent neural network architecure
+
+3. ensemble learning
+sentiment_analysis_8_ensemble.py - an ensemble of traditional machine learning techniques
+* sentiment_analysis_8.1_hyperparm_tuning_DTC - testing DecisionTreeClassifier with different parameters to see what params give best result on unseen data
+* sentiment_analysis_8.2_hyperparm_tuning_LR - testing linearRegression model with different parameters to see what params give best result on unseen data
+* sentiment_analysis_8.3_hyperparm_tuning_RFC - testing RandomForrestClassifier with different parameters to see what params give best result on unseen data
+sentiment_analysis_9_tuned_ensemble - using these optimal hyperparams, building an ensemble to test improvement with hyperparams set
+
+1. Initial data cleaning is needed as it removes a lot of 'useless' words (words that hold no semantic information)
+    by removing these we can focus on only the important features of each review and will overall improve the
+    models accuracy
+2. EDA helps us explore the dataset and understand what data preprocessing techniques would be needed.
+    2.1. When looking at the wordcloud's, I have included three visualisations. the whole dataset's wordcloud,
+         the positive reviews wordcloud, the negative reviews wordcloud. When talking about them, there are many
+         words that are prevalent in all three word clouds (i think the word "good" is in all three, but double
+         check). In a wordcloud, the size of the word indicates how frequently it occurs.
+    2.2. I wanted to look at how balanced the dataset is in terms of its distribution of positive and negative
+         review examples. If the dataset had more of one type it would be an unbalanced dataset, the model would
+         tend to hold a bias towards the majority class, leading to poor model performance. However the IMDB
+         dataset is split 50/50 so this is not something that we will need to worry about
+3. Stemming Vs Lemmatization - This is the process of removing suffixes and prefixes from words. e.g.
+                                running -> run. Both processes are useful but have negative cases where they
+                                dont work too well. So using both allows us to balance trade-offs between the two
+4. Vectorisation - I am using tf-idf vectorisation, this converts the review column of the dataset into a dataframe
+                   of TF-IDF features. What this means is that each column in the dataset represents a word,
+                   each row represents one review. and if a word is present in that review it will be represented
+                   as a 1, where as its absence will be recorded as a 0. Most of the dataframe contains 0's as
+                   after TF-IDF vectorisation there was over 200000+ columns. Meaning most of the dataframe holds
+                   little information about the sentiment of the review. that's why I have implemented feature selection
+                   One benefit of TF-IDF vectorisation is that all reviews contain the same length of input (200000+ columns,
+                   10000 after feature selection) This means that you do not need to pad all the sequences since the input
+                   to the model will always be the same size. There are some vectorisation techniques that will replace
+                   each word in the review with its word index, however this results in each review having a different length
+5. Feature Selection - The purpose of this step is to reduce the dimensionality of the vector output at the last stage.
+                       There will be many columns which exist which may only contain 1 positive example within
+                       the 49999 review samples. Columns like this hold very little semantic information and are
+                       not useful in helping us classify a review. I tried several methods
+                       5.1. PCA - principal component Analysis - this is a dimensionality reduction technique that
+                            tries to preserve most of the information within a dataframe. PCA takes very long to
+                            run and does not work well on a sparse dataset (which we receive after TF-IDF
+                            vectorisation).
+                            PCA also removes interpretability from the dataset as it casts the dataset onto a new
+                            feature space by its principal components (you don't really need to know what this means
+                            just know it makes the data unreadable as each column doesn't really hold any 'actual'
+                            value)
+                       5.2. RFE - Recursive Feature Elimination - remove features from a dataset by fitting a model
+                       and reviewing its performance after each iteration. It after RFE it maintains interpretability
+                       better than PCA as it doesn't cast the dataset onto a new feature space, however it does have
+                       some similar problems to PCA - it does not work well on a sparse dataset and takes a long time
+                       run. RFE takes a ML model (in the commented out example it was RandomForrestClassifier) to train
+                       on the dataset and this will allow you us to see which feature hold the most importance
+                       5.3. SelectKBest - scikit-learn function to select the most important features from a dataset
+                       based off scoring function. Takes both the TF-IDF vectorised review dataframe, and also each
+                       reviews sentiment as input. Then using the scoring function chi2 (chi-square statistic, which
+                       measures the dependence between variables) it is able to pick the 10000 (just a random number I
+                       picked) most important features. It is a lot faster and will remove a lot of the columns that hold
+                       little semantic information. Since it is faster we can expect that it will not work as effectively
+                       as if we were to use PCA or RFE. But this is a tradeoff i decided to make as it still works very
+                       efficiently.
+                       I tested out how useful this feature selection actually was on a running model because, I
+                       didn't actually know for sure if what i was doing was really useful and These were the metrics
+                       I received.
+                       selectKBest is a filter method - this means it will assess the characteristics of individual features
+                       based on a statistical measure (in our case the chi2 statistical test). Being a univaritate filter method,
+                       this method is a lot less computationally expensive than wrapper or embedded feature selection methods however
+                       it does have its shortcomings. It does not consider interactions between columns, which in our case
+                       can be very important, the phrase "not good" both words are needed to provide context to the sentiment.
+                       If we were to perform a filter based feature selection technique, it will look at each of these words presence
+                       within the review independent of each-other, however overall it still increased the accuracy of the model
+                       on unseen test data and due to the computational complexities of embedded and wrapper feature selection
+                       techniques, we decided to use a filter method.
+
+                       Without using Feature selection:
+                        TEST ACCURACY:  0.8756
+                        TEST PRECISION:  0.87142144638404
+                        TEST RECALL:  0.8793155510820332
+                        TEST F1:  0.8753507014028056
+                        TEST ROC_AUC:  0.8756239951137935
+
+                       With using feature selection:
+                        TEST ACCURACY:  0.88255
+                        TEST PRECISION:  0.8839846122696903
+                        TEST RECALL:  0.8789129340714645
+                        TEST F1:  0.8814414778175945
+                        TEST ROC_AUC:  0.8825265117451213
+
+                       as you can see it didn't have a massive effect on the accuracy of the model. Although it
+                       does seem to improve nearly every metric. One other benefit it has is it makes training
+                       the model a lot faster as it deals with a lot smaller dataframe
+6. Building the Model - I have built X number of models with each model existing within its own file so it is
+                        easy to differentiate. The first three models are different variations of a simple Deep
+                        Neural Network with varying architecture.
+                        Dense - this is a fully connected layer within the DNN - the integer represents the number
+                        of fully connected neurons within that layer which are connected up to the previous layer.
+                        Relu - this is the activation function. Honestly just stick this into chatgpt and learn
+                        what an activation function is and why we are using Relu
+                        Model1 - 3 layer deep NN with layers of 16 16 and 2
+                        Model2 - 3 layer deep NN with layers of 64 64 and 2
+                        Model3 - 5 layer deep NN with layers of 128 64 ...
+                        Model4 - LSTM model -
+                        Model5 - Logistic regression model - done
+                        Model6 - Random Forest Classifier model - done
+                        Model7 - Decision Tree Classifier model - done
+
+                        I haven't fully ran and compared each model but for the first three you would expect that
+                        the larger the model the better the performance. This isn't always the case, if we had a model
+                        with 10000 layers it would not preform too well but in terms of building the model, 128 neurons
+                        is as large as we would want to go
+                        The reason we each layer gets smaller is we want the NN to learn the patterns contained
+                        between the words. So as we move down each layer in the network we will want to learn
+                        information from the last one, eventually ending in having a binary classification.
+                        (the last layer having 2 layers) The last layer, each neuron represents a different
+                        sentiment, with whichever neuron has the larger value, you would expect to be the sentiment
+                        of the review
+
+7. StratifiedCV - we want to use cross validation for training the model as this gives us a better indication of the
+                 models performance as it give us an averaged set of performance metrics. It trains the model 5 times
+                 each time on 80% of the data with 20% being used a test (validation) data. There are lots of benefits
+                 of using CrossValidation: Reduces OverFitting - the models gets better at generalising (predicting
+                                                                unseen examples).
+                 StratifiedCV is a type of cross validation so that whenever the data is being split into testing
+                 and training dataset (for each fold) it ensures that there is a decent proportion of positive and
+                 negative samples in each fold
+
+                 The data gets split up into 5 sets, which then trains the model 5 times, each time a different set
+                 gets used as validation data with the other 80% of the data (data gets split into training and
+                 testing before hand, 60/40 split. so this 80% is 80% of the 60%)
+
+8. Training accuracy will always be higher than when tested on test data at the end as it tends to 'learn' the
+   training dataset very well, but when it comes to looking at new data (the data in the test dataset) this is
+   new unseen data. The models ability to preform on unseen data is called generalisation.
+
+   One technique to combat this overfitting on the training dataset is to apply regularization. *described regularisation*
+   I wanted to investigate if using regularization would be effective for a sentiment analysis task, and therefore have
+   ran two tests. One while using RMSProp as the optimization algorithm for whenever we are training our NN model,
+   and another using AdamW, which is an extension of the Adam optimization algorithm but with added weight decay.
+   The purpose of using this adamw optimization algorithm is, we are training a complex nn model, which can overfits
+   on the training dataset, however we want to reduce this overfitting effect, and since the adamw algorithm uses
+   L2 regularisation, I wanted to see if this would reduce the how our model overfit on the training data.
+
+   Accuracies without regularization:
+   TEST ACCURACY:  0.8788
+    TEST PRECISION:  0.8721633138440195
+    TEST RECALL:  0.8858580775037745
+    TEST F1:  0.8789573554379307
+    TEST ROC_AUC:  0.8788455812258068
+
+   Accuracies with regularization (Adamw optimization algorithm):
+   TEST ACCURACY:  0.88705
+    TEST PRECISION:  0.8853413654618474
+    TEST RECALL:  0.8875691997986915
+    TEST F1:  0.886453882885147
+    TEST ROC_AUC:  0.8870533530041643
+
+   Overall adding L2 regularization into the optimization process did help the accuracy and other metrics, however
+   only very slightly. *stick these results into chatGPT and see how they would describe it*
+
+9. LSTM (Long Short Term Memory)
+LSTM is a type of recurrent neural network (RNN) architecture designed to handle long-range
+dependencies and sequence modeling. Often when using an RNN a problem that can happen is if the sequence is long,
+the initial part of the sequence (first few words in the review) that the RNN read over (which might hold
+important sentiment information), can be forgotten.
+(This is called the vanishing gradient problem ** mention this in report **)
+LSTM addresses these problems which makes it suitable for dealing with long reviews.
+In this model we start with an embedding layer, then the output gets passed into a LSTM model with 8 units.
+(Initially i was using 100 units but because of the complexity of the model it overfit on the training data really
+quickly so i had to simplify the model to avoid this however it still overfits after about 5 epochs)
+(This isn't a bad thing as long as you describe in your report what is happening)
+
+10. callbacks
+callbacks are a set of functions that are called during the training process. In the LSTM model we use a callback
+called EarlyStopping, which will stop the training model if it senses a lack of improvement. Because our LSTM model
+is prone to overfitting, (which means the training accuracy keeps improving where as the validation_accuracy remains
+stagnent or stops improving). Since the training accuracy will keep improving we tell the EarlyStopping callback
+to monitor the validation_accuracy metric of the model, and set a patience value of 2 meaning that if, after 2
+consecutive epochs the validation hasn't improved, the model will stop training and continue with the rest of the
+file.
+
+11. ensemble methods
+Ensemble methods combine multiple base models to improve predictive performance. Simply they package the three models
+up, then fit them on the test data. Then when it comes to predicting the sentiment of a review, each model makes a
+prediction, then whatever the majority of models predict, is the output sentiment for each training example.
+after training this same appraoch is used on unseen (not used during the training process) test data.
+The idea is that between the three models they will make mistakes independently of each other and the type of
+mistakes each model makes will be different so by ensembling the three models together it should improve the
+predictive power of the model.
+
+
+12. hyperparmeter tuning
+Each of the three traditional machine learning techniques have lots of parameters that you can set. These params
+can greatly effect the models performance. In the first three notebooks we did not set any parameters but in files
+8.1, 8.2, 8.3 we created an optuna study (optuna is just a library for automated hyperparam tuning) with the intent
+of finding out which of these hyperparams give our model the best performance on an unseen dataset (the test data).
+For each of the three I ran 100 trials each testing out different selections of parameters in order to find the
+optimal selection, each trial uses a random set of params and outputs then tests the model created against the test
+data. Once the study was complete i was able to save these parameters to create an ensemble learning
+model (9) which makes use of these hyperparmeters. Talk about how the models output metrics performed against
+each of initial ensemble learning model (8) after having optimal hyperparmeters set
+
+13. using hyperparmeter tuning
+
+14. Comparisons to make
+- compare each of the traditional machine learning techniques against each other
+- compare how (between deep learning models) making the model larger can effect the accuracy and other metrics
+- compare ensemble (file 8) compares against the initial 3 traditional
+- compare each of the tradition machine learning methods with their hyperparameters set (8.1, 8.2...) to the original
+  traditional ML methods (1-3)
+- compare how the ensemble changed after having a different set of hyperparameters set
+
+15 things to mention when comparing models
+- look up what each of the 5 metrics actually mean and just explain why they vary using the output metrics
+  from each model as an example
+
+POSSIBLE ERRORS:
+Input 0 of layer "dense" is incompatible with the layer: expected axis -1 of input shape to have value 202891, but received input with shape (None, 203078)
+- if this happens you need to change the variable at the top (input_dim) to hold the value of the recieved shape, in this case change it from 202891 -> 203078
+- although if you want to use feature selection this shouldn't be a problem, just make sure that input_dim is the same as the selectKBest function
