@@ -1,5 +1,9 @@
 DELETE THIS NOTEPAD BEFORE SUBMISSION!!!
 
+to download the data it can be found here:
+https://www.kaggle.com/datasets/lakshmi25npathi/imdb-dataset-of-50k-movie-reviews
+there might be problems with this but we can discuss tmr
+
 notebook index:
 1. Tradition machine learning
 sentiment_analysis_1_decision_tree - simple decision tree classifier
